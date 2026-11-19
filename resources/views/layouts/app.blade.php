@@ -59,9 +59,13 @@
               <i data-lucide="folder"></i>
               <span>Categorías</span>
             </a>
-            <a class="nav-item" href="{{ route('tickets.index', ['technician' => 'unassigned']) }}">
+            <a class="nav-item {{ request()->routeIs('tickets.unassigned') ? 'is-active' : '' }}" href="{{ route('tickets.unassigned') }}" @if(request()->routeIs('tickets.unassigned')) aria-current="page" @endif>
               <i data-lucide="wrench"></i>
               <span>Sin asignar</span>
+            </a>
+            <a class="nav-item {{ ($active ?? '') === 'users' ? 'is-active' : '' }}" href="{{ route('users.index') }}" @if(($active ?? '') === 'users') aria-current="page" @endif>
+              <i data-lucide="users"></i>
+              <span>Usuarios</span>
             </a>
 
             <span class="nav-label">Análisis</span>

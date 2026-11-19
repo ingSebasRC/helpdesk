@@ -4,16 +4,23 @@
 
 @section('content')
   @php
-    $sortUrl = function (string $key) use ($filters) {
+    $unassignedOnly = $unassignedOnly ?? false;
+    $listRoute = $unassignedOnly ? route('tickets.unassigned') : route('tickets.index');
+    $sortUrl = function (string $key) use ($filters, $listRoute) {
       $direction = $filters['sort'] === $key && $filters['direction'] === 'asc' ? 'desc' : 'asc';
-      return route('tickets.index', array_filter(array_merge($filters, ['sort' => $key, 'direction' => $direction])));
+      return $listRoute.'?'.http_build_query(array_filter(array_merge($filters, ['sort' => $key, 'direction' => $direction])));
     };
   @endphp
 
   <div class="page-head">
     <div>
-      <h2>Solicitudes</h2>
-      <p>Administra el ciclo completo de las solicitudes de soporte.</p>
+      @if ($unassignedOnly)
+        <h2>Sin asignar</h2>
+        <p>Solicitudes pendientes de asignación de técnico.</p>
+      @else
+        <h2>Solicitudes</h2>
+        <p>Administra el ciclo completo de las solicitudes de soporte.</p>
+      @endif
     </div>
     <div class="page-head-actions">
       @if ($role === 'admin')
@@ -28,7 +35,7 @@
   </div>
 
   <div class="card table-card">
-    <form class="toolbar" action="{{ route('tickets.index') }}" method="GET">
+    <form class="toolbar" action="{{ $listRoute }}" method="GET">
       <input type="hidden" name="sort" value="{{ $filters['sort'] }}" />
       <input type="hidden" name="direction" value="{{ $filters['direction'] }}" />
 
@@ -69,19 +76,23 @@
           @endforeach
         </select>
 
-        <label class="sr-only" for="filter-technician">Técnico</label>
-        <select class="select" id="filter-technician" name="technician">
-          <option value="">Todos los técnicos</option>
-          @if ($role === 'admin')
-            <option value="unassigned" @selected($filters['technician'] === 'unassigned')>Sin asignar</option>
-          @endif
-          @foreach ($technicians as $technician)
-            <option value="{{ $technician['id'] }}" @selected($filters['technician'] === $technician['id'])>{{ $technician['name'] }}</option>
-          @endforeach
-        </select>
+        @if ($unassignedOnly)
+          <input type="hidden" name="technician" value="unassigned" />
+        @else
+          <label class="sr-only" for="filter-technician">Técnico</label>
+          <select class="select" id="filter-technician" name="technician">
+            <option value="">Todos los técnicos</option>
+            @if ($role === 'admin')
+              <option value="unassigned" @selected($filters['technician'] === 'unassigned')>Sin asignar</option>
+            @endif
+            @foreach ($technicians as $technician)
+              <option value="{{ $technician['id'] }}" @selected($filters['technician'] === $technician['id'])>{{ $technician['name'] }}</option>
+            @endforeach
+          </select>
+        @endif
 
         <button type="submit" class="btn btn--ghost btn--sm"><i data-lucide="filter"></i>Filtrar</button>
-        <a class="btn btn--ghost btn--sm" href="{{ route('tickets.index') }}"><i data-lucide="x"></i>Limpiar</a>
+        <a class="btn btn--ghost btn--sm" href="{{ $listRoute }}"><i data-lucide="x"></i>Limpiar</a>
       </div>
     </form>
 
@@ -141,6 +152,19 @@
                 {{ \Carbon\Carbon::parse($ticket['updatedAt'])->locale('es')->diffForHumans() }}
               </td>
               <td class="td-actions">
+                @if ($unassignedOnly)
+                  <form action="{{ route('tickets.assign', $ticket['id']) }}" method="POST" style="display: flex; gap: 6px; margin-bottom: 8px" onclick="event.stopPropagation()">
+                    @csrf
+                    <label class="sr-only" for="assign-{{ $ticket['id'] }}">Asignar técnico a {{ $ticket['code'] }}</label>
+                    <select class="select select--sm" id="assign-{{ $ticket['id'] }}" name="technician_id" required>
+                      <option value="">Asignar técnico…</option>
+                      @foreach ($technicians as $technician)
+                        <option value="{{ $technician['id'] }}">{{ $technician['name'] }}</option>
+                      @endforeach
+                    </select>
+                    <button type="submit" class="btn btn--primary btn--sm">Asignar</button>
+                  </form>
+                @endif
                 <div class="row-actions" onclick="event.stopPropagation()">
                   <a class="icon-btn" href="{{ route('tickets.show', $ticket['id']) }}" title="Ver detalle" aria-label="Ver detalle">
                     <i data-lucide="eye"></i>
@@ -167,8 +191,8 @@
               <td colspan="8">
                 <div class="empty-state">
                   <span class="empty-state-icon"><i data-lucide="search"></i></span>
-                  <p class="empty-state-title">No hay solicitudes</p>
-                  <p class="empty-state-text">Ajusta los filtros o crea una nueva solicitud para empezar.</p>
+                  <p class="empty-state-title">{{ $unassignedOnly ? 'No hay solicitudes sin asignar' : 'No hay solicitudes' }}</p>
+                  <p class="empty-state-text">{{ $unassignedOnly ? 'Todas las solicitudes tienen un técnico asignado.' : 'Ajusta los filtros o crea una nueva solicitud para empezar.' }}</p>
                 </div>
               </td>
             </tr>

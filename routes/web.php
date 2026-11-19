@@ -3,6 +3,7 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\HelpdeskController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
@@ -18,6 +19,8 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('admin')->group(function () {
         Route::get('/tickets/export', [TicketController::class, 'export'])->name('tickets.export');
+        Route::get('/tickets/unassigned', [TicketController::class, 'unassigned'])->name('tickets.unassigned');
+        Route::post('/tickets/{ticket}/assign', [TicketController::class, 'assignTechnician'])->name('tickets.assign');
     });
 
     Route::post('/tickets/{ticket}/note', [TicketController::class, 'addNote'])->name('tickets.note');
@@ -25,5 +28,6 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('admin')->group(function () {
         Route::resource('categories', CategoryController::class);
+        Route::resource('users', UserController::class)->only(['index', 'update']);
     });
 });

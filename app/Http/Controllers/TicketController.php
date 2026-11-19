@@ -15,38 +15,38 @@ class TicketController extends Controller
 {
     public function index(Request $request)
     {
-        $filters = [
-            'q' => trim((string) $request->query('q', '')),
-            'status' => (string) $request->query('status', ''),
-            'priority' => (string) $request->query('priority', ''),
-            'category' => (string) $request->query('category', ''),
-            'technician' => (string) $request->query('technician', ''),
-            'sort' => (string) $request->query('sort', 'updatedAt'),
-            'direction' => (string) $request->query('direction', 'desc'),
-        ];
+        return $this->renderTickets($request, false);
+    }
 
-        $tickets = Ticket::query();
-        if (auth()->user()->role === 'usuario') {
-            $tickets->where('user_id', auth()->id());
+    public function unassigned(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            abort(403);
         }
 
-        $items = HelpdeskData::filter(TicketPresenter::collection($tickets->get()), $filters);
-        $perPage = 10;
-        $page = max(1, (int) $request->query('page', 1));
-        $paginator = new LengthAwarePaginator(
-            $items->forPage($page, $perPage)->values()->all(),
-            $items->count(),
-            $perPage,
-            $page,
-            ['path' => route('tickets.index')]
-        );
-        $paginator->withQueryString();
+        return $this->renderTickets($request, true);
+    }
 
-        return view('tickets.index', array_merge($this->formData(), [
-            'tickets' => $paginator,
-            'filters' => $filters,
-            'showCreate' => $request->query('new') === '1' || old('title') !== null,
-        ]));
+    public function assignTechnician(Request $request, Ticket $ticket)
+    {
+        if (auth()->user()->role !== 'admin') {
+            abort(403);
+        }
+
+        $technicianIds = User::query()
+            ->whereIn('role', ['admin', 'tecnico'])
+            ->pluck('id')
+            ->implode(',');
+
+        $data = $request->validate([
+            'technician_id' => ['required', 'in:'.$technicianIds],
+        ]);
+
+        $ticket->assigned_to = $data['technician_id'];
+        $ticket->save();
+
+        return redirect()->route('tickets.unassigned')
+            ->with('status', 'Técnico asignado correctamente.');
     }
 
     public function create()
@@ -217,6 +217,49 @@ class TicketController extends Controller
         if (auth()->user()->role === 'usuario' && (string) $ticket->user_id !== (string) auth()->id()) {
             abort(403);
         }
+    }
+
+    private function renderTickets(Request $request, bool $unassignedOnly)
+    {
+        $filters = [
+            'q' => trim((string) $request->query('q', '')),
+            'status' => (string) $request->query('status', ''),
+            'priority' => (string) $request->query('priority', ''),
+            'category' => (string) $request->query('category', ''),
+            'technician' => (string) $request->query('technician', ''),
+            'sort' => (string) $request->query('sort', 'updatedAt'),
+            'direction' => (string) $request->query('direction', 'desc'),
+        ];
+
+        if ($unassignedOnly) {
+            $filters['technician'] = 'unassigned';
+        }
+
+        $tickets = Ticket::query();
+        if ($unassignedOnly) {
+            $tickets->whereNull('assigned_to');
+        } elseif (auth()->user()->role === 'usuario') {
+            $tickets->where('user_id', auth()->id());
+        }
+
+        $items = HelpdeskData::filter(TicketPresenter::collection($tickets->get()), $filters);
+        $perPage = 10;
+        $page = max(1, (int) $request->query('page', 1));
+        $paginator = new LengthAwarePaginator(
+            $items->forPage($page, $perPage)->values()->all(),
+            $items->count(),
+            $perPage,
+            $page,
+            ['path' => $unassignedOnly ? route('tickets.unassigned') : route('tickets.index')]
+        );
+        $paginator->withQueryString();
+
+        return view('tickets.index', array_merge($this->formData(), [
+            'tickets' => $paginator,
+            'filters' => $filters,
+            'showCreate' => $request->query('new') === '1' || old('title') !== null,
+            'unassignedOnly' => $unassignedOnly,
+        ]));
     }
 
     private function formData(): array
