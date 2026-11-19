@@ -118,7 +118,7 @@
             @enderror
           </div>
 
-          @if ($errors->any() && !$errors->has('email') && !$errors->has('password'))
+          @if ($errors->has('credentials') || ($errors->any() && !$errors->has('email') && !$errors->has('password')))
             <div class="login-error is-visible" role="alert">
               <i data-lucide="alert-circle"></i>
               <span>{{ $errors->first() }}</span>
@@ -130,6 +130,11 @@
             <i data-lucide="arrow-right"></i>
           </button>
         </form>
+
+        <p class="login-subtitle" style="margin-top: 14px; text-align: center">
+          ¿No tienes cuenta?
+          <a class="text-accent" href="{{ route('register') }}"><strong>Regístrate aquí</strong></a>
+        </p>
 
         <div class="demo-card">
           <p class="demo-title"><i data-lucide="sparkles"></i>Acceso Rapido de demostración</p>

@@ -9,6 +9,7 @@ use App\Support\HelpdeskData;
 use App\Support\TicketPresenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class HelpdeskController extends Controller
 {
@@ -35,8 +36,39 @@ class HelpdeskController extends Controller
         }
 
         return back()->withInput()->withErrors([
-            'email' => 'Las credenciales no son correctas.',
+            'email' => 'Usuario o contraseña incorrectos.',
+            'credentials' => 'Usuario o contraseña incorrectos.',
         ]);
+    }
+
+    public function showRegister()
+    {
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('register', ['heroStats' => $this->heroStats()]);
+    }
+
+    public function register(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'role' => 'usuario',
+        ]);
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return redirect()->route('dashboard');
     }
 
     public function logout(Request $request)

@@ -11,6 +11,8 @@ Route::get('/', fn () => redirect()->route('dashboard'));
 Route::middleware('guest')->group(function () {
     Route::get('/login', [HelpdeskController::class, 'showLogin'])->name('login');
     Route::post('/login', [HelpdeskController::class, 'login'])->name('login.store');
+    Route::get('/register', [HelpdeskController::class, 'showRegister'])->name('register');
+    Route::post('/register', [HelpdeskController::class, 'register'])->name('register.store');
 });
 
 Route::middleware('auth')->group(function () {
