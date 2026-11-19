@@ -3,15 +3,19 @@
 @section('title', 'Panel general')
 
 @section('content')
+  @php $userRole = $role ?? auth()->user()->role; @endphp
+
   <div class="page-head">
     <div>
       <h2>Panel general</h2>
       <p>Estado del servicio de soporte y actividad del equipo.</p>
     </div>
     <div class="page-head-actions">
-      <a class="btn btn--secondary" href="{{ route('tickets.export') }}">
-        <i data-lucide="bar-chart-3"></i>Ver reportes
-      </a>
+      @if ($userRole === 'admin')
+        <a class="btn btn--secondary" href="{{ route('tickets.export') }}">
+          <i data-lucide="bar-chart-3"></i>Ver reportes
+        </a>
+      @endif
       <a class="btn btn--primary" href="{{ route('tickets.create') }}">
         <i data-lucide="plus"></i>Nueva solicitud
       </a>
@@ -44,9 +48,11 @@
         <h3 class="card-title">Contadores por estado</h3>
         <p class="card-subtitle">Total de solicitudes en cada fase del flujo</p>
       </div>
-      <a class="btn btn--ghost btn--sm" href="{{ route('tickets.index') }}">
-        Ver solicitudes<i data-lucide="arrow-right"></i>
-      </a>
+      @if ($userRole !== 'usuario')
+        <a class="btn btn--ghost btn--sm" href="{{ route('tickets.index') }}">
+          Ver solicitudes<i data-lucide="arrow-right"></i>
+        </a>
+      @endif
     </div>
     <div class="card-body">
       <div style="display: flex; flex-wrap: wrap; gap: 10px">
@@ -60,11 +66,12 @@
     </div>
   </section>
 
-  <div class="grid-2 grid-2--uneven">
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <h3 class="card-title">Tendencia de solicitudes</h3>
+  @if ($userRole !== 'usuario')
+    <div class="grid-2 grid-2--uneven">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Tendencia de solicitudes</h3>
           <p class="card-subtitle">Solicitudes creadas y resueltas por día</p>
         </div>
         <div class="card-header-actions">
@@ -98,9 +105,11 @@
         </div>
       </div>
     </div>
-  </div>
+    </div>
+  @endif
 
-  <div class="grid-2 grid-2--uneven">
+  @if ($userRole !== 'usuario')
+  <div class="{{ $userRole === 'admin' ? 'grid-2 grid-2--uneven' : '' }}">
     <div class="card card--flush">
       <div class="card-header">
         <div>
@@ -151,9 +160,10 @@
       </div>
     </div>
 
-    @php
-      $maxActive = max(1, ...array_column($stats['technicians'], 'active'));
-    @endphp
+    @if ($userRole === 'admin')
+      @php
+        $maxActive = max(1, ...array_column($stats['technicians'], 'active'));
+      @endphp
 
     <div class="card card--flush">
       <div class="card-header">
@@ -183,10 +193,13 @@
         @endforeach
       </div>
     </div>
+    @endif
   </div>
+  @endif
 @endsection
 
 @push('scripts')
+  @if (auth()->user()->role !== 'usuario')
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -275,4 +288,5 @@
       });
     });
   </script>
+  @endif
 @endpush

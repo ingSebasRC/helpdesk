@@ -53,13 +53,19 @@ class HelpdeskController extends Controller
         $days = (int) $request->query('range', 14);
         $days = in_array($days, [7, 14, 30], true) ? $days : 14;
 
-        $tickets = TicketPresenter::collection(Ticket::query()->get());
+        $query = Ticket::query();
+        if (auth()->user()->role === 'usuario') {
+            $query->where('user_id', auth()->id());
+        }
+
+        $tickets = TicketPresenter::collection($query->get());
         $stats = HelpdeskData::stats($tickets);
         $trend = HelpdeskData::trend($tickets, $days);
         $recent = collect($tickets)->sortByDesc('updatedAt')->take(6)->values()->all();
 
         return view('dashboard', [
             'active' => 'dashboard',
+            'role' => auth()->user()->role,
             'title' => 'Panel',
             'subtitle' => 'Resumen general del servicio de soporte',
             'days' => $days,

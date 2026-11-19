@@ -16,9 +16,11 @@
       <p>Administra el ciclo completo de las solicitudes de soporte.</p>
     </div>
     <div class="page-head-actions">
-      <a class="btn btn--secondary" href="{{ route('tickets.export', array_filter($filters)) }}">
-        <i data-lucide="download"></i>Exportar CSV
-      </a>
+      @if ($role === 'admin')
+        <a class="btn btn--secondary" href="{{ route('tickets.export', array_filter($filters)) }}">
+          <i data-lucide="download"></i>Exportar CSV
+        </a>
+      @endif
       <button type="button" class="btn btn--primary" data-modal-open="ticket-modal">
         <i data-lucide="plus"></i>Nueva solicitud
       </button>
@@ -70,7 +72,9 @@
         <label class="sr-only" for="filter-technician">Técnico</label>
         <select class="select" id="filter-technician" name="technician">
           <option value="">Todos los técnicos</option>
-          <option value="unassigned" @selected($filters['technician'] === 'unassigned')>Sin asignar</option>
+          @if ($role === 'admin')
+            <option value="unassigned" @selected($filters['technician'] === 'unassigned')>Sin asignar</option>
+          @endif
           @foreach ($technicians as $technician)
             <option value="{{ $technician['id'] }}" @selected($filters['technician'] === $technician['id'])>{{ $technician['name'] }}</option>
           @endforeach
@@ -141,16 +145,20 @@
                   <a class="icon-btn" href="{{ route('tickets.show', $ticket['id']) }}" title="Ver detalle" aria-label="Ver detalle">
                     <i data-lucide="eye"></i>
                   </a>
-                  <a class="icon-btn" href="{{ route('tickets.edit', $ticket['id']) }}" title="Editar" aria-label="Editar">
-                    <i data-lucide="pencil"></i>
-                  </a>
-                  <form action="{{ route('tickets.destroy', $ticket['id']) }}" method="POST" onsubmit="return confirm('¿Eliminar la solicitud {{ $ticket['code'] }}?');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="icon-btn icon-btn--danger" title="Eliminar" aria-label="Eliminar">
-                      <i data-lucide="trash-2"></i>
-                    </button>
-                  </form>
+                  @if ($role === 'admin' || ($role === 'usuario' && $ticket['userId'] === (string) auth()->id()))
+                    <a class="icon-btn" href="{{ route('tickets.edit', $ticket['id']) }}" title="Editar" aria-label="Editar">
+                      <i data-lucide="pencil"></i>
+                    </a>
+                  @endif
+                  @if ($role === 'admin')
+                    <form action="{{ route('tickets.destroy', $ticket['id']) }}" method="POST" onsubmit="return confirm('¿Eliminar la solicitud {{ $ticket['code'] }}?');">
+                      @csrf
+                      @method('DELETE')
+                      <button type="submit" class="icon-btn icon-btn--danger" title="Eliminar" aria-label="Eliminar">
+                        <i data-lucide="trash-2"></i>
+                      </button>
+                    </form>
+                  @endif
                 </div>
               </td>
             </tr>
@@ -227,16 +235,18 @@
             @error('description')<span class="field-error">{{ $message }}</span>@enderror
           </div>
 
-          <div class="field">
-            <label for="ticket-user">Solicitante <span class="req">*</span></label>
-            <select class="select" id="ticket-user" name="user_id" required>
-              <option value="">Selecciona un usuario</option>
-              @foreach ($users as $user)
-                <option value="{{ $user['id'] }}" @selected(old('user_id') === $user['id'])>{{ $user['name'] }}</option>
-              @endforeach
-            </select>
-            @error('user_id')<span class="field-error">{{ $message }}</span>@enderror
-          </div>
+          @if ($role !== 'usuario')
+            <div class="field">
+              <label for="ticket-user">Solicitante <span class="req">*</span></label>
+              <select class="select" id="ticket-user" name="user_id" required>
+                <option value="">Selecciona un usuario</option>
+                @foreach ($users as $user)
+                  <option value="{{ $user['id'] }}" @selected(old('user_id') === $user['id'])>{{ $user['name'] }}</option>
+                @endforeach
+              </select>
+              @error('user_id')<span class="field-error">{{ $message }}</span>@enderror
+            </div>
+          @endif
 
           <div class="field">
             <label for="ticket-category">Categoría <span class="req">*</span></label>
@@ -259,26 +269,30 @@
             @error('priority')<span class="field-error">{{ $message }}</span>@enderror
           </div>
 
-          <div class="field">
-            <label for="ticket-status">Estado</label>
-            <select class="select" id="ticket-status" name="status">
-              @foreach ($statuses as $status)
-                <option value="{{ $status }}" @selected(old('status', 'Abierto') === $status)>{{ $status }}</option>
-              @endforeach
-            </select>
-            @error('status')<span class="field-error">{{ $message }}</span>@enderror
-          </div>
+          @if ($role !== 'usuario')
+            <div class="field">
+              <label for="ticket-status">Estado</label>
+              <select class="select" id="ticket-status" name="status">
+                @foreach ($statuses as $status)
+                  <option value="{{ $status }}" @selected(old('status', 'Abierto') === $status)>{{ $status }}</option>
+                @endforeach
+              </select>
+              @error('status')<span class="field-error">{{ $message }}</span>@enderror
+            </div>
+          @endif
 
-          <div class="field">
-            <label for="ticket-technician">Técnico asignado</label>
-            <select class="select" id="ticket-technician" name="technician_id">
-              <option value="">Sin asignar</option>
-              @foreach ($technicians as $technician)
-                <option value="{{ $technician['id'] }}" @selected(old('technician_id') === $technician['id'])>{{ $technician['name'] }}</option>
-              @endforeach
-            </select>
-            @error('technician_id')<span class="field-error">{{ $message }}</span>@enderror
-          </div>
+          @if ($role === 'admin')
+            <div class="field">
+              <label for="ticket-technician">Técnico asignado</label>
+              <select class="select" id="ticket-technician" name="technician_id">
+                <option value="">Sin asignar</option>
+                @foreach ($technicians as $technician)
+                  <option value="{{ $technician['id'] }}" @selected(old('technician_id') === $technician['id'])>{{ $technician['name'] }}</option>
+                @endforeach
+              </select>
+              @error('technician_id')<span class="field-error">{{ $message }}</span>@enderror
+            </div>
+          @endif
 
         </div>
 

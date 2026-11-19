@@ -5,7 +5,11 @@
     'tecnico' => 'Técnico',
     default => 'Usuario',
   };
-  $activeCount = \App\Models\Ticket::whereIn('status', \App\Support\TicketPresenter::ACTIVE_STATUSES)->count();
+  $activeTickets = \App\Models\Ticket::whereIn('status', \App\Support\TicketPresenter::ACTIVE_STATUSES);
+  if ($currentUser->role === 'usuario') {
+    $activeTickets->where('user_id', $currentUser->id);
+  }
+  $activeCount = $activeTickets->count();
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -49,21 +53,23 @@
             <span class="nav-badge">{{ $activeCount }}</span>
           </a>
 
-          <span class="nav-label">Administración</span>
-          <a class="nav-item {{ ($active ?? '') === 'categories' ? 'is-active' : '' }}" href="{{ route('categories.index') }}" @if(($active ?? '') === 'categories') aria-current="page" @endif>
-            <i data-lucide="folder"></i>
-            <span>Categorías</span>
-          </a>
-          <a class="nav-item" href="{{ route('tickets.index', ['technician' => 'unassigned']) }}">
-            <i data-lucide="wrench"></i>
-            <span>Sin asignar</span>
-          </a>
+          @if ($currentUser->role === 'admin')
+            <span class="nav-label">Administración</span>
+            <a class="nav-item {{ ($active ?? '') === 'categories' ? 'is-active' : '' }}" href="{{ route('categories.index') }}" @if(($active ?? '') === 'categories') aria-current="page" @endif>
+              <i data-lucide="folder"></i>
+              <span>Categorías</span>
+            </a>
+            <a class="nav-item" href="{{ route('tickets.index', ['technician' => 'unassigned']) }}">
+              <i data-lucide="wrench"></i>
+              <span>Sin asignar</span>
+            </a>
 
-          <span class="nav-label">Análisis</span>
-          <a class="nav-item" href="{{ route('tickets.export') }}">
-            <i data-lucide="bar-chart-3"></i>
-            <span>Exportar datos</span>
-          </a>
+            <span class="nav-label">Análisis</span>
+            <a class="nav-item" href="{{ route('tickets.export') }}">
+              <i data-lucide="bar-chart-3"></i>
+              <span>Exportar datos</span>
+            </a>
+          @endif
         </nav>
 
         <div class="sidebar-footer">

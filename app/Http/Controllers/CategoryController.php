@@ -7,6 +7,13 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
+    public function __construct()
+    {
+        if (auth()->user()?->role !== 'admin') {
+            abort(403);
+        }
+    }
+
     public function index()
     {
         return view('categories.index', [

@@ -32,16 +32,18 @@
       @error('description')<span class="field-error">{{ $message }}</span>@enderror
     </div>
 
-    <div class="field">
-      <label for="ticket-form-user">Solicitante <span class="req">*</span></label>
-      <select class="select" id="ticket-form-user" name="user_id" required>
-        <option value="">Selecciona un usuario</option>
-        @foreach ($users as $user)
-          <option value="{{ $user['id'] }}" @selected($value('user_id', $ticket['userId'] ?? '') === $user['id'])>{{ $user['name'] }}</option>
-        @endforeach
-      </select>
-      @error('user_id')<span class="field-error">{{ $message }}</span>@enderror
-    </div>
+    @if ($role !== 'usuario')
+      <div class="field">
+        <label for="ticket-form-user">Solicitante <span class="req">*</span></label>
+        <select class="select" id="ticket-form-user" name="user_id" required>
+          <option value="">Selecciona un usuario</option>
+          @foreach ($users as $user)
+            <option value="{{ $user['id'] }}" @selected($value('user_id', $ticket['userId'] ?? '') === $user['id'])>{{ $user['name'] }}</option>
+          @endforeach
+        </select>
+        @error('user_id')<span class="field-error">{{ $message }}</span>@enderror
+      </div>
+    @endif
 
     <div class="field">
       <label for="ticket-form-category">Categoría <span class="req">*</span></label>
@@ -64,26 +66,30 @@
       @error('priority')<span class="field-error">{{ $message }}</span>@enderror
     </div>
 
-    <div class="field">
-      <label for="ticket-form-status">Estado</label>
-      <select class="select" id="ticket-form-status" name="status">
-        @foreach ($statuses as $status)
-          <option value="{{ $status }}" @selected($value('status', $ticket['status'] ?? 'Abierto') === $status)>{{ $status }}</option>
-        @endforeach
-      </select>
-      @error('status')<span class="field-error">{{ $message }}</span>@enderror
-    </div>
+    @if ($role !== 'usuario')
+      <div class="field">
+        <label for="ticket-form-status">Estado</label>
+        <select class="select" id="ticket-form-status" name="status">
+          @foreach ($statuses as $status)
+            <option value="{{ $status }}" @selected($value('status', $ticket['status'] ?? 'Abierto') === $status)>{{ $status }}</option>
+          @endforeach
+        </select>
+        @error('status')<span class="field-error">{{ $message }}</span>@enderror
+      </div>
+    @endif
 
-    <div class="field span-2">
-      <label for="ticket-form-technician">Técnico asignado</label>
-      <select class="select" id="ticket-form-technician" name="technician_id">
-        <option value="">Sin asignar</option>
-        @foreach ($technicians as $technician)
-          <option value="{{ $technician['id'] }}" @selected($technicianValue === $technician['id'])>{{ $technician['name'] }}</option>
-        @endforeach
-      </select>
-      @error('technician_id')<span class="field-error">{{ $message }}</span>@enderror
-    </div>
+    @if ($role === 'admin')
+      <div class="field span-2">
+        <label for="ticket-form-technician">Técnico asignado</label>
+        <select class="select" id="ticket-form-technician" name="technician_id">
+          <option value="">Sin asignar</option>
+          @foreach ($technicians as $technician)
+            <option value="{{ $technician['id'] }}" @selected($technicianValue === $technician['id'])>{{ $technician['name'] }}</option>
+          @endforeach
+        </select>
+        @error('technician_id')<span class="field-error">{{ $message }}</span>@enderror
+      </div>
+    @endif
   </div>
 
   <div class="modal-footer" style="padding-left: 0; padding-right: 0">

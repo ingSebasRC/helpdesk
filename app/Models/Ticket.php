@@ -16,7 +16,15 @@ class Ticket extends Model
         'user_id',
         'category_id',
         'assigned_to',
+        'notes',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'notes' => 'array',
+        ];
+    }
 
     public function user(): BelongsTo
     {

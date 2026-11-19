@@ -23,14 +23,18 @@
           </div>
         </div>
         <div class="detail-actions">
-          <button type="button" class="btn btn--secondary btn--sm" data-modal-open="detail-edit-modal">
-            <i data-lucide="pencil"></i>Editar
-          </button>
-          <form action="{{ route('tickets.destroy', $ticket['id']) }}" method="POST" onsubmit="return confirm('¿Eliminar la solicitud {{ $ticket['code'] }}?');">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="btn btn--danger btn--sm"><i data-lucide="trash-2"></i>Eliminar</button>
-          </form>
+          @if ($role === 'admin' || ($role === 'usuario' && $ticket['userId'] === (string) auth()->id()))
+            <button type="button" class="btn btn--secondary btn--sm" data-modal-open="detail-edit-modal">
+              <i data-lucide="pencil"></i>Editar
+            </button>
+          @endif
+          @if ($role === 'admin')
+            <form action="{{ route('tickets.destroy', $ticket['id']) }}" method="POST" onsubmit="return confirm('¿Eliminar la solicitud {{ $ticket['code'] }}?');">
+              @csrf
+              @method('DELETE')
+              <button type="submit" class="btn btn--danger btn--sm"><i data-lucide="trash-2"></i>Eliminar</button>
+            </form>
+          @endif
         </div>
       </div>
     @endif
@@ -87,6 +91,52 @@
             @endforeach
           </div>
         </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Notas de seguimiento</h3>
+              <p class="card-subtitle">Comunicación interna y notificaciones del equipo</p>
+            </div>
+          </div>
+          <div class="card-body">
+            @forelse ($ticket['notes'] ?? [] as $note)
+              <div class="timeline-item">
+                <div class="timeline-rail">
+                  <span class="timeline-dot"><i data-lucide="message-square"></i></span>
+                </div>
+                <div class="timeline-content">
+                  <p class="timeline-title">
+                    {{ $note['author'] ?? 'Equipo de soporte' }}
+                    @if (! empty($note['notify']))
+                      <span class="badge badge--info">Notificación enviada</span>
+                    @endif
+                  </p>
+                  <p class="timeline-detail">{{ $note['message'] ?? '' }}</p>
+                  <p class="timeline-time">@isset($note['createdAt']){{ \Carbon\Carbon::parse($note['createdAt'])->locale('es')->format('d/m/Y H:i') }}@endisset</p>
+                </div>
+              </div>
+            @empty
+              <p class="text-muted">Sin notas de seguimiento todavía.</p>
+            @endforelse
+
+            @if ($role === 'admin' || $role === 'tecnico')
+              <form action="{{ route('tickets.note', $ticket['id']) }}" method="POST" style="margin-top: 18px">
+                @csrf
+                <div class="field">
+                  <label for="note-message">Agregar nota de seguimiento</label>
+                  <textarea class="textarea" id="note-message" name="message" rows="3" placeholder="Describe la actuación o el avance de la solicitud…" required>{{ old('message') }}</textarea>
+                  @error('message')<span class="field-error">{{ $message }}</span>@enderror
+                </div>
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; margin: 10px 0">
+                  <input type="checkbox" name="notify" value="1" @checked(old('notify')) />
+                  Notificar al solicitante
+                </label>
+                <button type="submit" class="btn btn--primary btn--sm"><i data-lucide="send"></i>Guardar nota</button>
+              </form>
+            @endif
+          </div>
+        </div>
       </div>
 
       <aside class="detail-side">
@@ -109,6 +159,7 @@
           </div>
         </div>
 
+        @if ($role !== 'usuario')
         <div class="card">
           <div class="card-header">
             <div>
@@ -128,27 +179,30 @@
                   @endforeach
                 </select>
               </div>
-              <div class="field">
-                <label for="quick-technician">Técnico asignado</label>
-                <select class="select" id="quick-technician" name="technician_id">
-                  <option value="">Sin asignar</option>
-                  @foreach ($technicians as $technician)
-                    <option value="{{ $technician['id'] }}" @selected(old('technician_id', $ticket['technicianId'] ?? '') === $technician['id'])>{{ $technician['name'] }}</option>
-                  @endforeach
-                </select>
-              </div>
+              @if ($role === 'admin')
+                <div class="field">
+                  <label for="quick-technician">Técnico asignado</label>
+                  <select class="select" id="quick-technician" name="technician_id">
+                    <option value="">Sin asignar</option>
+                    @foreach ($technicians as $technician)
+                      <option value="{{ $technician['id'] }}" @selected(old('technician_id', $ticket['technicianId'] ?? '') === $technician['id'])>{{ $technician['name'] }}</option>
+                    @endforeach
+                  </select>
+                </div>
+              @endif
               <button type="submit" class="btn btn--primary btn--sm btn--block"><i data-lucide="save"></i>Guardar cambios</button>
               <p class="field-hint">Los cambios se guardan al enviar el formulario.</p>
             </div>
           </form>
         </div>
+        @endif
       </aside>
     </div>
   @endif
 @endsection
 
 @section('modals')
-  @if ($ticket)
+  @if ($ticket && ($role === 'admin' || ($role === 'usuario' && $ticket['userId'] === (string) auth()->id())))
     <div class="modal-backdrop" id="detail-edit-modal" aria-hidden="true">
       <div class="modal modal--lg" role="dialog" aria-modal="true" aria-labelledby="detail-edit-title">
         <div class="modal-header">
@@ -182,15 +236,17 @@
               <textarea class="textarea" id="edit-description" name="description" rows="4" required>{{ old('description', $ticket['description']) }}</textarea>
               @error('description')<span class="field-error">{{ $message }}</span>@enderror
             </div>
-            <div class="field">
-              <label for="edit-user">Solicitante <span class="req">*</span></label>
-              <select class="select" id="edit-user" name="user_id" required>
-                @foreach ($users as $user)
-                  <option value="{{ $user['id'] }}" @selected(old('user_id', $ticket['userId']) === $user['id'])>{{ $user['name'] }}</option>
-                @endforeach
-              </select>
-              @error('user_id')<span class="field-error">{{ $message }}</span>@enderror
-            </div>
+            @if ($role === 'admin')
+              <div class="field">
+                <label for="edit-user">Solicitante <span class="req">*</span></label>
+                <select class="select" id="edit-user" name="user_id" required>
+                  @foreach ($users as $user)
+                    <option value="{{ $user['id'] }}" @selected(old('user_id', $ticket['userId']) === $user['id'])>{{ $user['name'] }}</option>
+                  @endforeach
+                </select>
+                @error('user_id')<span class="field-error">{{ $message }}</span>@enderror
+              </div>
+            @endif
             <div class="field">
               <label for="edit-category">Categoría <span class="req">*</span></label>
               <select class="select" id="edit-category" name="category_id" required>
@@ -209,25 +265,27 @@
               </select>
               @error('priority')<span class="field-error">{{ $message }}</span>@enderror
             </div>
-            <div class="field">
-              <label for="edit-status">Estado</label>
-              <select class="select" id="edit-status" name="status">
-                @foreach ($statuses as $status)
-                  <option value="{{ $status }}" @selected(old('status', $ticket['status']) === $status)>{{ $status }}</option>
-                @endforeach
-              </select>
-              @error('status')<span class="field-error">{{ $message }}</span>@enderror
-            </div>
-            <div class="field">
-              <label for="edit-technician">Técnico asignado</label>
-              <select class="select" id="edit-technician" name="technician_id">
-                <option value="">Sin asignar</option>
-                @foreach ($technicians as $technician)
-                  <option value="{{ $technician['id'] }}" @selected(old('technician_id', $ticket['technicianId'] ?? '') === $technician['id'])>{{ $technician['name'] }}</option>
-                @endforeach
-              </select>
-              @error('technician_id')<span class="field-error">{{ $message }}</span>@enderror
-            </div>
+            @if ($role === 'admin')
+              <div class="field">
+                <label for="edit-status">Estado</label>
+                <select class="select" id="edit-status" name="status">
+                  @foreach ($statuses as $status)
+                    <option value="{{ $status }}" @selected(old('status', $ticket['status']) === $status)>{{ $status }}</option>
+                  @endforeach
+                </select>
+                @error('status')<span class="field-error">{{ $message }}</span>@enderror
+              </div>
+              <div class="field">
+                <label for="edit-technician">Técnico asignado</label>
+                <select class="select" id="edit-technician" name="technician_id">
+                  <option value="">Sin asignar</option>
+                  @foreach ($technicians as $technician)
+                    <option value="{{ $technician['id'] }}" @selected(old('technician_id', $ticket['technicianId'] ?? '') === $technician['id'])>{{ $technician['name'] }}</option>
+                  @endforeach
+                </select>
+                @error('technician_id')<span class="field-error">{{ $message }}</span>@enderror
+              </div>
+            @endif
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn--secondary" data-modal-close>Cancelar</button>

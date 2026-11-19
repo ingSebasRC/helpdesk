@@ -16,7 +16,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [HelpdeskController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [HelpdeskController::class, 'dashboard'])->name('dashboard');
 
-    Route::get('/tickets/export', [TicketController::class, 'export'])->name('tickets.export');
+    Route::middleware('admin')->group(function () {
+        Route::get('/tickets/export', [TicketController::class, 'export'])->name('tickets.export');
+    });
+
+    Route::post('/tickets/{ticket}/note', [TicketController::class, 'addNote'])->name('tickets.note');
     Route::resource('tickets', TicketController::class);
-    Route::resource('categories', CategoryController::class);
+
+    Route::middleware('admin')->group(function () {
+        Route::resource('categories', CategoryController::class);
+    });
 });

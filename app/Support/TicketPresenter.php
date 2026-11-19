@@ -16,6 +16,25 @@ class TicketPresenter
         $createdAt = $ticket->created_at?->toIso8601String() ?? now()->toIso8601String();
         $updatedAt = $ticket->updated_at?->toIso8601String() ?? $createdAt;
         $resolved = in_array($ticket->status, self::RESOLVED_STATUSES, true);
+        $notes = $ticket->notes ?? [];
+
+        $history = [
+            [
+                'action' => 'Solicitud creada',
+                'detail' => 'Solicitud registrada en el sistema.',
+                'author' => 'Sistema',
+                'createdAt' => $createdAt,
+            ],
+        ];
+
+        foreach ($notes as $note) {
+            $history[] = [
+                'action' => ! empty($note['notify']) ? 'Notificación de seguimiento' : 'Nota de seguimiento',
+                'detail' => $note['message'] ?? '',
+                'author' => $note['author'] ?? 'Equipo de soporte',
+                'createdAt' => $note['createdAt'] ?? $updatedAt,
+            ];
+        }
 
         return [
             'id' => $ticket->id,
@@ -31,15 +50,9 @@ class TicketPresenter
             'updatedAt' => $updatedAt,
             'dueDate' => null,
             'resolvedAt' => $resolved ? $updatedAt : null,
-            'comments' => [],
-            'history' => [
-                [
-                    'action' => 'Solicitud creada',
-                    'detail' => 'Solicitud registrada en el sistema.',
-                    'author' => 'Sistema',
-                    'createdAt' => $createdAt,
-                ],
-            ],
+            'comments' => $notes,
+            'notes' => $notes,
+            'history' => $history,
         ];
     }
 
